@@ -14,7 +14,7 @@ struct helloApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            OrderHistoryView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }
     }
