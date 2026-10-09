@@ -22,6 +22,9 @@ final class InAppWebViewModel: NSObject {
     private(set) var isLoading = false
     private(set) var estimatedProgress = 0.0
     private(set) var isCloseRequested = false
+    /// Set once a page has loaded; before that the screen may be blank.
+    private(set) var hasFinishedFirstLoad = false
+    private(set) var loadError: (any Error)?
 
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private var hasLoaded = false
@@ -53,6 +56,21 @@ final class InAppWebViewModel: NSObject {
             .compactMap { $0 }
             .joined(separator: " ")
         webView.load(JapaneseWebSupport.localized(request))
+    }
+
+    func retry() {
+        loadError = nil
+        webView.load(JapaneseWebSupport.localized(request))
+    }
+
+    private func handleLoadFailure(_ error: any Error) {
+        let nsError = error as NSError
+        // Cancelled loads are expected: `decidePolicyFor` cancels navigations to re-issue them.
+        let isCancellation = (nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled)
+            || (nsError.domain == "WebKitErrorDomain" && nsError.code == 102) // frame load interrupted
+        guard !isCancellation else { return }
+        WebBridge.logger.error("Web load failed: \(nsError.localizedDescription, privacy: .public)")
+        loadError = error
     }
 
     private func handle(_ command: WebBridge.Command) {
@@ -120,5 +138,18 @@ extension InAppWebViewModel: WKNavigationDelegate {
 
         webView.load(JapaneseWebSupport.localized(request))
         return .cancel
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        hasFinishedFirstLoad = true
+        loadError = nil
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: any Error) {
+        handleLoadFailure(error)
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: any Error) {
+        handleLoadFailure(error)
     }
 }

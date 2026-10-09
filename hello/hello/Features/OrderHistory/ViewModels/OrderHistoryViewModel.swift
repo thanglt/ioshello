@@ -28,20 +28,11 @@ final class OrderHistoryViewModel {
 
     init(url: URL? = OrderHistoryViewModel.defaultURL, bundle: Bundle = .main) {
         self.url = url
-        self.userAgentPrefix = Self.makeUserAgentPrefix(bundle: bundle)
+        self.userAgentPrefix = WebUserAgent.prefix(bundle: bundle)
     }
 
     func openTapped() {
         guard canOpen else { return }
         isShowingWebView = true
-    }
-
-    private static func makeUserAgentPrefix(bundle: Bundle) -> String {
-        let info = bundle.infoDictionary ?? [:]
-        let appName = info["CFBundleDisplayName"] as? String
-            ?? info["CFBundleName"] as? String
-            ?? ""
-        let version = info["CFBundleShortVersionString"] as? String ?? ""
-        return "ios:\(appName):\(version)"
     }
 }

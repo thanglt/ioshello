@@ -10,6 +10,10 @@ import WebKit
 /// Receives the page's `window.ReactNativeWebView.postMessage(JSON.stringify(msg))` calls.
 /// The page was written for a React Native host, so we provide that object and forward
 /// each message to a `WKScriptMessageHandler`.
+///
+/// The page's back button only sends `{"command":"back"}` when its URL has `_top`; otherwise
+/// it calls `history.back()`. On the first page there is nothing to go back to, and with the
+/// app's navigation bar hidden the user would be stuck, so that case also sends `back`.
 enum WebBridge {
     static let handlerName = "nativeBridge"
 
@@ -17,6 +21,16 @@ enum WebBridge {
         window.ReactNativeWebView = window.ReactNativeWebView || {
           postMessage: (data) => window.webkit.messageHandlers.\(handlerName).postMessage(String(data))
         };
+        (() => {
+          const originalBack = History.prototype.back;
+          History.prototype.back = function () {
+            if (window.history.length <= 1) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({ command: "back" }));
+              return;
+            }
+            return originalBack.call(this);
+          };
+        })();
         """
 
     /// A command sent by the page as `{ "command": "...", ... }`.
