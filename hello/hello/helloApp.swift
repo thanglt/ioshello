@@ -14,7 +14,9 @@ struct helloApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            SavedLinksView(viewModel: SavedLinksViewModel(
+                store: CoreDataSavedLinkStore(context: persistenceController.container.viewContext)
+            ))
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
         }
     }
